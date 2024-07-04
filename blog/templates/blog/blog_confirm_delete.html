@@ -1,0 +1,25 @@
+{% extends 'blog/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card mb-4 rounded-3 shadow-sm">
+            <div class="card-header py-3">
+                <h4 class="my-0 fw-normal">Удаление блога</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'blog:blog_delete' object.pk %}" class="form-floating" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <p>Хотите удалить блог - <strong>{{ object.title }}</strong>?</p>
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
+                    </div>
+                    <div class="mb-3">
+                        <a href="{% url 'blog:blog_list' %}" class="btn btn-sm btn-outline-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
