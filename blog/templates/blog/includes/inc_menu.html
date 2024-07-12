@@ -5,7 +5,7 @@
         {% if user.is_authenticated %}
         <li><a href="{% url 'blog:blog_create' %}" class="text-white">Создать блог</a></li>
         <li><a href="{% url 'users:profile' %}" class="text-white">Профиль</a></li>
-        <li><a href="{% url 'users:subscription_create' %}" class="text-white">Купить подписку</a></li>
+        <li><a href="{% url 'users:perform_create' %}" class="text-white">Подписка</a></li>
         <li>
             <form method="post" action="{% url 'users:logout' %}" style="display:inline;">
                 {% csrf_token %}

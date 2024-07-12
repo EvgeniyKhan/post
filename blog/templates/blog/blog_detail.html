@@ -1,4 +1,5 @@
 {% extends 'blog/base.html' %}
+{% load tag %}
 
 {% block content %}
 <div class="container mt-4">
@@ -6,13 +7,12 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-body">
-                    <h1 class="card-title">{{ object.title }}</h1>
-                    <p class="card-text">{{ object.content }}</p>
-                    <p class="card-text"><small class="text-muted">Количество просмотров: {{ object.count_views }}</small></p>
-                    <p class="card-text"><small class="text-muted">Дата публикации: {{ object.created_at }}</small></p>
-                    <a href="{% url 'blog:blog_list' %}" class="btn btn-sm btn-outline-secondary mt-3">
-                        Вернуться назад к списку новостей
-                    </a>
+                        <img class="good_logo" src="{{ blog.preview|mymedia }}" alt="Фото" style="width:100%;">
+                        <h1 class="card-title">{{ blog.title }}</h1>
+                        <p class="card-text">{{ blog.content }}</p>
+                        <p class="card-text"><small class="text-muted">Количество просмотров: {{ blog.count_view }}</small></p>
+                        <p class="card-text"><small class="text-muted">Дата публикации: {{ blog.created_at }}</small></p>
+                        <a href="{% url 'blog:blog_list' %}" class="btn btn-sm btn-outline-secondary mt-3">Вернуться назад к списку новостей</a>
                 </div>
             </div>
         </div>

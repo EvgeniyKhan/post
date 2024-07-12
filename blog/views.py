@@ -1,8 +1,12 @@
-from django.shortcuts import render
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DetailView, DeleteView, UpdateView, ListView
+from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
+                                  UpdateView)
 
+from blog.forms import BlogForm, BlogModeratorForm
 from blog.models import Blog
+from users.models import User, Subscription
 
 
 class BlogCreateView(CreateView):
@@ -12,22 +16,62 @@ class BlogCreateView(CreateView):
     success_url = reverse_lazy("blog:blog_list")
 
     def get_context_data(self, **kwargs):
+        """
+        Получает дополнительные данные контекста для отображения формы создания блога.
+
+        Args:
+        **kwargs: Дополнительные аргументы ключевых слов, передаваемые в метод.
+
+        Returns:
+        dict: Словарь с дополнительными данными контекста для шаблона.
+            Включает в себя заголовок страницы для создания блога.
+        """
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Создание блога'
+        context["title"] = "Создание блога"
         return context
 
     def form_valid(self, form):
-        self.object = form.save()
-        self.object.author = self.request.user
-        self.object.save()
-
+        """
+        Метод при успешном создании.
+        Если пользователь авторизован -
+        Добавляет текущего пользователя при создании объекта.
+        Меняет флаг публикации на положительный.
+        """
+        if form.is_valid():
+            new_content = form.save(commit=False)
+            if self.request.user.is_authenticated:
+                new_content.user = self.request.user
+                new_content.publish = True
+                new_content.save()
+            else:
+                new_content.save()
         return super().form_valid(form)
 
 
-class BlogUpdateView(UpdateView):
+class BlogUpdateView(LoginRequiredMixin, UpdateView):
     model = Blog
     template_name = "blog/blog_form.html"
     fields = "__all__"
+
+    def get_form_class(self):
+        """
+            Возвращает соответствующий класс формы в зависимости от прав доступа пользователя и владения блог-постом.
+
+            Возвращает:
+            - BlogForm: Если текущий пользователь является владельцем блог-поста.
+            - BlogModeratorForm: Если текущий пользователь имеет права на редактирование заголовка и содержимого блог-поста.
+
+            Вызывает:
+            - PermissionDenied: Если текущий пользователь не имеет достаточных прав или не является владельцем блог-поста.
+        """
+        user = self.object.owner
+        if user == self.object.owner:
+            return BlogForm
+        if user.has_perm("blog.can_edit_title") and user.has_perm(
+                "blog.can_edit_content"
+        ):
+            return BlogModeratorForm
+        raise PermissionDenied
 
 
 class BlogListView(ListView):
@@ -35,29 +79,87 @@ class BlogListView(ListView):
     template_name = "blog/blog_list.html"
     fields = ("title", "content")
 
+    def get_queryset(self):
+        """
+            Возвращает queryset блог-постов в зависимости от аутентификации пользователя и его прав.
+
+            Если пользователь не аутентифицирован, возвращается queryset блог-постов,
+            которые не являются премиумными.
+
+            Если пользователь является суперпользователем или аутентифицирован, возвращается полный queryset
+            всех блог-постов.
+
+            Возвращает:
+            - QuerySet: В зависимости от статуса аутентификации и прав пользователя,
+              возвращается соответствующий QuerySet блог-постов.
+        """
+        if not self.request.user.is_authenticated:
+            return Blog.objects.filter(is_premium=False)
+        elif self.request.user.is_superuser or self.request.user.payments or self.request.user.is_authenticated:
+            return Blog.objects.all()
+
 
 class BlogDetailView(DetailView):
     model = Blog
 
     def get_object(self, queryset=None):
         """
-        Получает объект модели из базы данных, увеличивает счетчик просмотров на 1 и сохраняет изменения.
+            Возвращает объект блога для текущей страницы и обновляет счетчик просмотров.
 
-        Args:
-            queryset: QuerySet, опциональный. QuerySet, используемый для получения объекта.
+            Args:
+            - queryset (QuerySet, optional): QuerySet для поиска объекта блога.
 
-        Returns:
-            Объект модели с обновленным счетчиком просмотров.
-
-        Raises:
-            Может возникнуть исключение, если объект не найден в базе данных.
+            Returns:
+            - Blog: Обновленный объект блога.
         """
         self.object = super().get_object(queryset)
         self.object.count_view += 1
         self.object.save()
         return self.object
 
+    def get_context_data(self, **kwargs):
+        """
+            Добавляет дополнительные данные в контекст страницы блога.
 
-class BlogDeleteView(DeleteView):
+            В контекст добавляется информация о доступе к контенту блога в зависимости от аутентификации пользователя и его подписки.
+
+            Возвращает:
+            - dict: Контекст данных страницы блога с дополнительной информацией о доступе к контенту.
+        """
+        context = super().get_context_data(**kwargs)
+        blog = self.get_object()
+        if self.request.user.is_authenticated or self.request.user == Blog.owner:
+            user_subscribed = User.objects.filter(
+                payments=self.request.user == Subscription.is_subscribed
+            ).exists()
+            if user_subscribed:
+                context["can_view_content"] = True
+            else:
+                context["can_view_content"] = not blog.is_premium
+        else:
+            context["can_view_content"] = not blog.is_premium
+        return context
+
+
+class BlogDeleteView(LoginRequiredMixin, DeleteView):
     model = Blog
     success_url = reverse_lazy("blog:blog_list")
+
+    def get_queryset(self):
+        """
+            Возвращает queryset блог-постов в зависимости от аутентификации пользователя и его прав.
+
+            Если пользователь не аутентифицирован, возвращается queryset блог-постов,
+            которые не являются премиумными.
+
+            Если пользователь является суперпользователем или аутентифицирован, возвращается полный queryset
+            всех блог-постов.
+
+            Возвращает:
+            - QuerySet: В зависимости от статуса аутентификации и прав пользователя,
+            возвращается соответствующий QuerySet блог-постов.
+        """
+        if not self.request.user.is_authenticated:
+            return Blog.objects.filter(is_premium=False)
+        elif self.request.user.is_superuser or self.request.user.payments or self.request.user.is_authenticated:
+            return Blog.objects.all()

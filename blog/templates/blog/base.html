@@ -27,7 +27,7 @@
             <div class="row">
                 <div class="col-sm-8 col-md-7 py-4">
                     <h4 class="text-white">О нас</h4>
-                    <p class="text-muted">Добро пожаловать на YouBlog!</p>
+                    <p class="text-muted">Добро пожаловать на You100gramm!</p>
 
                     <p class="text-muted">YouBlog – это ваше пространство для выражения мыслей, обмена идеями и общения с
                         единомышленниками. Мы создали эту платформу, чтобы предоставить вам возможность делиться своими
@@ -49,7 +49,7 @@
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                     <circle cx="12" cy="13" r="4"></circle>
                 </svg>
-                <strong>YouBlog</strong>
+                <strong>You100gramm</strong>
             </a>
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarHeader"
                     aria-controls="navbarHeader" aria-expanded="false" aria-label="Toggle navigation">
@@ -63,11 +63,11 @@
 
     <section class="jumbotron text-center">
         <div class="container">
-            <h1 class="jumbotron-heading">YouBlog</h1>
-            <p class="lead text-muted">YouBlog - делитесь своими историями, вдохновляйте мир!</p>
+            <h1 class="jumbotron-heading">You100gramm</h1>
+            <p class="lead text-muted">You100gramm - делитесь своими историями, вдохновляйте мир!</p>
             <p>
-                <a href="#" class="btn btn-primary my-2">Main call to action</a>
-                <a href="#" class="btn btn-secondary my-2">Secondary action</a>
+                <a href="{% url 'users:register' %}" class="btn btn-primary my-2">Регестрация</a>
+                <a href="{% url 'users:perform_create' %}" class="btn btn-secondary my-2">Купить подписку</a>
             </p>
         </div>
     </section>

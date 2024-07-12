@@ -1,0 +1,5 @@
+{% extends 'blog/base.html' %}
+{% block content %}
+    <h1>Этот пост доступен только подписчикам</h1>
+    <p>Для доступа к этому контенту, пожалуйста, <a href="{% url 'users:perform_create' %}">оформите подписку</a>.</p>
+{% endblock %}
