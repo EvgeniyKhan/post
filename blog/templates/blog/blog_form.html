@@ -3,14 +3,24 @@
 {% block content %}
 
 <div class="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
-    <h1 class="display-4">Добавить блог</h1>
+    {% if object %}
+        <h1 class="display-4">Редактировать блог</h1>
+    {% else %}
+        <h1 class="display-4">Добавить блог</h1>
+    {% endif %}
 </div>
 
 <div class="row justify-content-center">
     <div class="col-md-6 col-lg-4">
         <div class="card mb-4 rounded-3 shadow-sm">
             <div class="card-header py-3">
-                <h4 class="my-0 fw-normal">Редактирование блога</h4>
+                <h4 class="my-0 fw-normal">
+                    {% if object %}
+                        Редактирование блога
+                    {% else %}
+                        Создание блога
+                    {% endif %}
+                </h4>
             </div>
             <div class="card-body">
                 <form method="post" action="" class="form-floating" enctype="multipart/form-data">

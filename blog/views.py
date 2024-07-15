@@ -8,15 +8,17 @@ from django.urls import reverse_lazy
 from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
                                   UpdateView)
 
-from blog.forms import BlogForm, BlogModeratorForm
+from blog.forms import BlogForm, BlogModeratorForm, BlogFormPremium
 from blog.models import Blog
 from users.models import User, Subscription
+from users.services import check_payment_status
 
 
 class BlogCreateView(CreateView):
     model = Blog
     template_name = "blog/blog_form.html"
     fields = ("title", "content", "preview")
+    form_class = BlogForm
     success_url = reverse_lazy("blog:blog_list")
 
     def get_context_data(self, **kwargs):
@@ -50,11 +52,23 @@ class BlogCreateView(CreateView):
         new_content.save()
         return super().form_valid(form)
 
+    def get_form_class(self):
+        user = self.request.user
+        try:
+            subscription = Subscription.objects.get(pk=user.payments_id)
+        except Subscription.DoesNotExist:
+            return BlogForm
+        if check_payment_status(subscription.content_id):
+            return BlogFormPremium
+        else:
+            return BlogForm
+
 
 class BlogUpdateView(LoginRequiredMixin, UpdateView):
     model = Blog
     template_name = "blog/blog_form.html"
-    fields = "__all__"
+    fields = ("title", "content", "preview")
+    success_url = reverse_lazy("blog:blog_list")
 
     def get_form_class(self):
         """
