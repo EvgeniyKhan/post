@@ -43,10 +43,10 @@ class BlogCreateView(CreateView):
         """
         new_content = form.save(commit=False)
         if self.request.user.is_authenticated:
-            new_content.user = self.request.user
+            new_content.owner = self.request.user
             new_content.publish = True
             # Устанавливаем флаг платного контента в зависимости от статуса пользователя
-            new_content.is_premium = self.request.user.payments or self.request.user.is_superuser
+            new_content.is_premium = bool(self.request.user.payments) or self.request.user.is_superuser
         new_content.save()
         return super().form_valid(form)
 

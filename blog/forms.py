@@ -23,7 +23,7 @@ class BlogForm(StyleFormMixin, ModelForm):
         """
 
         model = Blog
-        fields = ("title", "content", "preview")
+        fields = ("title", "content", "preview", "is_premium")
 
 
 class BlogModeratorForm(StyleFormMixin, ModelForm):
