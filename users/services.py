@@ -47,8 +47,17 @@ def create_stripe_session(price):
         tuple: Идентификатор и URL созданной сессии оплаты в Stripe.
     """
     session = stripe.checkout.Session.create(
-        success_url="http://127.0.0.1:8080/",
+        success_url="http://127.0.0.1:8000/",
         line_items=[{"price": price.get("id"), "quantity": 1}],
         mode="payment",
     )
     return session.get("id"), session.get("url")
+
+
+def check_payment_status(payment_intent_id):
+    try:
+        payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        return payment_intent.status == 'succeeded'
+    except stripe.error.StripeError as e:
+        # Обработка ошибок Stripe
+        return False

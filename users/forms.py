@@ -38,6 +38,18 @@ class UserRegisterForm(UserCreationForm, StyleFormMixin):
         model = User
         fields = ("phone_number", "password1", "password2")
 
+    def clean_phone_number(self):
+        """
+        Проверяет уникальность номера телефона пользователя.
+
+        Возвращает очищенное значение номера телефона, если номер уникален.
+        Вызывает ValidationError, если пользователь с таким номером телефона уже существует.
+        """
+        phone_number = self.cleaned_data.get('phone_number')
+        if User.objects.filter(phone_number=phone_number).exists():
+            raise forms.ValidationError('Пользователь с таким номером телефона уже существует.')
+        return phone_number
+
 
 class UserPasswordRecoveryForm(StyleFormMixin, PasswordResetForm):
     """

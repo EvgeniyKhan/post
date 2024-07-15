@@ -1,16 +1,21 @@
 from datetime import datetime
 
+import stripe
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import CreateView, UpdateView
 
 from users.forms import UserProfileForm, UserRegisterForm
 from users.models import Subscription, User
 from users.services import (create_stripe_price, create_stripe_product,
-                            create_stripe_session)
+                            create_stripe_session, check_payment_status)
 
 
 class UserRegisterView(CreateView):
@@ -148,3 +153,48 @@ class SubscriptionCreate(CreateView):
             user.save()
             payment.save()
             return redirect(payment.payment_url)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class StripeWebhookView(View):
+
+    def post(self, request, *args, **kwargs):
+        """
+        Обрабатывает POST-запрос от Stripe после завершения оплаты.
+
+        Args:
+        - request (HttpRequest): HTTP-запрос от Stripe.
+        - *args: Позиционные аргументы для дополнительной обработки.
+        - **kwargs: Именованные аргументы для дополнительной обработки.
+
+        Returns:
+        - JsonResponse: Возвращает 200 OK, если обработка успешна, или 400 в случае ошибки.
+
+        Raises:
+        - PermissionDenied: Если запрос не содержит корректный идентификатор платежа.
+        """
+        payload = request.body
+        sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+        endpoint_secret = 'your_endpoint_secret'
+
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, endpoint_secret
+            )
+        except ValueError:
+            return JsonResponse({'status': 'invalid payload'}, status=400)
+        except stripe.error.SignatureVerificationError:
+            return JsonResponse({'status': 'invalid signature'}, status=400)
+
+        if event['type'] == 'payment_intent.succeeded':
+            payment_intent = event['data']['object']
+            payment_intent_id = payment_intent['id']
+
+            if check_payment_status(payment_intent_id):
+                try:
+                    payment = Subscription.objects.get(session_id=payment_intent_id)
+                    payment.is_subscribed = True
+                    payment.save()
+                except Subscription.DoesNotExist:
+                    return JsonResponse({'status': 'payment not found'}, status=404)
+
+        return JsonResponse({'status': 'success'}, status=200)

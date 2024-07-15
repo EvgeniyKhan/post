@@ -8,7 +8,7 @@ from users.models import User
 class BlogTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create(
-            phone_number="123456",
+            phone_number="+123456789",
             is_staff=True,
             is_active=True,
             is_superuser=True,

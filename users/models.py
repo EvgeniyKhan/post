@@ -1,7 +1,9 @@
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from phonenumber_field.modelfields import PhoneNumberField
 
 from config.settings import NULLABLE
 
@@ -109,7 +111,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     """
 
     username = None
-    phone_number = models.CharField(max_length=40, unique=True, verbose_name="Телефон")
+    phone_number = models.CharField(max_length=40, unique=True, verbose_name="Телефон", validators=[
+        RegexValidator(
+            regex=r'^\+?1?\d{9,15}$',
+            message="Номер телефона должен быть в формате: '+999999999'. Допустимая длина от 9 до 15 цифр."
+        ),
+    ])
     avatar = models.ImageField(
         upload_to="users/", verbose_name="Изображение", **NULLABLE
     )

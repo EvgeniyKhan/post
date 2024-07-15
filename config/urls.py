@@ -21,7 +21,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("", include("blog.urls", namespace="blog")),
-    path("users/", include(("users.urls", "users"), namespace="users")),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+                  path("admin/", admin.site.urls),
+                  path("", include("blog.urls", namespace="blog")),
+                  path("users/", include(("users.urls", "users"), namespace="users")),
+              ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

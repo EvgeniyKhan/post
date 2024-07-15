@@ -20,5 +20,5 @@ class UserAdmin(admin.ModelAdmin):
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
     model = Subscription
-    exclude = ("content_id",)
+    exclude = ("content_id", "user")
     search_fields = ("user",)
