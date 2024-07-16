@@ -67,20 +67,10 @@ class BlogUpdateView(UpdateView):
 
     def get_object(self, queryset=None):
         """
-            Получает объект товара из базы данных и проверяет, является ли текущий пользователь владельцем товара.
-
-            Args:
-                self: Объект представления.
-                queryset: Запрос для получения объекта. По умолчанию None.
-
-            Returns:
-                object: Объект товара, если текущий пользователь является владельцем.
-
-            Raises:
-                Http404: Если текущий пользователь не является владельцем товара.
-            """
+        Получает объект товара из базы данных и проверяет, является ли текущий пользователь владельцем товара.
+        """
         self.object = super().get_object(queryset)
-        if self.object.owner != self.request.user:
+        if self.object.owner != self.request.user and not self.request.user.is_superuser:
             raise Http404("Вы не являетесь владельцем этого товара")
         return self.object
 
@@ -128,6 +118,25 @@ class BlogDetailView(DetailView):
         self.object.save()
         return self.object
 
+    def get_queryset(self):
+        """
+            Возвращает queryset блог-постов в зависимости от аутентификации пользователя и его прав.
+
+            Если пользователь не аутентифицирован, возвращается queryset блог-постов,
+            которые не являются премиумными.
+
+            Если пользователь является суперпользователем или аутентифицирован, возвращается полный queryset
+            всех блог-постов.
+
+            Возвращает:
+            - QuerySet: В зависимости от статуса аутентификации и прав пользователя,
+            возвращается соответствующий QuerySet блог-постов.
+        """
+        if not self.request.user.is_authenticated:
+            return Blog.objects.filter(is_premium=False)
+        elif self.request.user.is_superuser or self.request.user.payments or self.request.user.is_authenticated:
+            return Blog.objects.all()
+
 
 class BlogDeleteView(LoginRequiredMixin, DeleteView):
     model = Blog
@@ -151,6 +160,10 @@ class BlogDeleteView(LoginRequiredMixin, DeleteView):
             return Blog.objects.filter(is_premium=False)
         elif self.request.user.is_superuser or self.request.user.payments or self.request.user.is_authenticated:
             return Blog.objects.all()
+
+    def test_func(self):
+        blog = self.get_object()
+        return self.request.user == blog.owner or self.request.user.is_superuser
 
 
 def subscription_required(request):
