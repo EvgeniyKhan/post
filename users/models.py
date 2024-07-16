@@ -127,7 +127,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_superuser = models.BooleanField(default=False)
     payments = models.ForeignKey(
         Subscription,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         verbose_name="Ссылка на пользователя",
         **NULLABLE,
     )

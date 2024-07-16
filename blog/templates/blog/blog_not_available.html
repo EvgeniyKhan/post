@@ -1,5 +1,17 @@
 {% extends 'blog/base.html' %}
+
 {% block content %}
-    <h1>Этот пост доступен только подписчикам</h1>
-    <p>Для доступа к этому контенту, пожалуйста, <a href="{% url 'users:perform_create' %}">оформите подписку</a>.</p>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h1 class="card-title">Этот пост доступен только подписчикам</h1>
+                        <p class="card-text">Для доступа к этому контенту, пожалуйста, оформите подписку.</p>
+                        <a href="{% url 'users:perform_create' %}" class="btn btn-primary">Оформить подписку</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}

@@ -1,24 +1,20 @@
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import PermissionDenied
-from django.db.models.signals import pre_save
-from django.dispatch import receiver
-from django.shortcuts import redirect, render
+from django.http import Http404
+from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
                                   UpdateView)
 
-from blog.forms import BlogForm, BlogModeratorForm, BlogFormPremium
+from blog.forms import BlogForm, BlogFormPremium
 from blog.models import Blog
-from users.models import User, Subscription
+from users.models import Subscription
 from users.services import check_payment_status
+from django.core.exceptions import ObjectDoesNotExist
 
 
 class BlogCreateView(CreateView):
     model = Blog
     template_name = "blog/blog_form.html"
-    fields = ("title", "content", "preview")
-    form_class = BlogForm
     success_url = reverse_lazy("blog:blog_list")
 
     def get_context_data(self, **kwargs):
@@ -45,10 +41,10 @@ class BlogCreateView(CreateView):
         """
         new_content = form.save(commit=False)
         if self.request.user.is_authenticated:
-            new_content.owner = self.request.user
+            new_content.owner = self.request.user  # Используйте 'owner' вместо 'user'
             new_content.publish = True
             # Устанавливаем флаг платного контента в зависимости от статуса пользователя
-            new_content.is_premium = bool(self.request.user.payments) or self.request.user.is_superuser
+            new_content.is_premium = self.request.user.payments.exists() is not None or self.request.user.is_superuser
         new_content.save()
         return super().form_valid(form)
 
@@ -56,45 +52,42 @@ class BlogCreateView(CreateView):
         user = self.request.user
         try:
             subscription = Subscription.objects.get(pk=user.payments_id)
-        except Subscription.DoesNotExist:
-            return BlogForm
-        if check_payment_status(subscription.content_id):
-            return BlogFormPremium
-        else:
+            if check_payment_status(subscription.content_id):
+                return BlogFormPremium
+            else:
+                return BlogForm
+        except ObjectDoesNotExist:
             return BlogForm
 
 
-class BlogUpdateView(LoginRequiredMixin, UpdateView):
+class BlogUpdateView(UpdateView):
     model = Blog
-    template_name = "blog/blog_form.html"
     fields = ("title", "content", "preview")
     success_url = reverse_lazy("blog:blog_list")
 
-    def get_form_class(self):
+    def get_object(self, queryset=None):
         """
-            Возвращает соответствующий класс формы в зависимости от прав доступа пользователя и владения блог-постом.
+            Получает объект товара из базы данных и проверяет, является ли текущий пользователь владельцем товара.
 
-            Возвращает:
-            - BlogForm: Если текущий пользователь является владельцем блог-поста.
-            - BlogModeratorForm: Если текущий пользователь имеет права на редактирование заголовка и содержимого блог-поста.
+            Args:
+                self: Объект представления.
+                queryset: Запрос для получения объекта. По умолчанию None.
 
-            Вызывает:
-            - PermissionDenied: Если текущий пользователь не имеет достаточных прав или не является владельцем блог-поста.
-        """
-        user = self.object.owner
-        if user == self.object.owner:
-            return BlogForm
-        if user.has_perm("blog.can_edit_title") and user.has_perm(
-                "blog.can_edit_content"
-        ):
-            return BlogModeratorForm
-        raise PermissionDenied
+            Returns:
+                object: Объект товара, если текущий пользователь является владельцем.
+
+            Raises:
+                Http404: Если текущий пользователь не является владельцем товара.
+            """
+        self.object = super().get_object(queryset)
+        if self.object.owner != self.request.user:
+            raise Http404("Вы не являетесь владельцем этого товара")
+        return self.object
 
 
 class BlogListView(ListView):
     model = Blog
     template_name = "blog/blog_list.html"
-    fields = ("title", "content")
 
     def get_queryset(self):
         """
@@ -112,7 +105,8 @@ class BlogListView(ListView):
         """
         if not self.request.user.is_authenticated:
             return Blog.objects.filter(is_premium=False)
-        elif self.request.user.is_superuser or self.request.user.payments or self.request.user.is_authenticated:
+        elif self.request.user.is_superuser or self.request.user.is_authenticated or check_payment_status(
+                self.request.user.payments.content_id):
             return Blog.objects.all()
 
 
@@ -133,29 +127,6 @@ class BlogDetailView(DetailView):
         self.object.count_view += 1
         self.object.save()
         return self.object
-
-    def get_context_data(self, **kwargs):
-        """
-            Добавляет дополнительные данные в контекст страницы блога.
-
-            В контекст добавляется информация о доступе к контенту блога в зависимости от аутентификации пользователя и его подписки.
-
-            Возвращает:
-            - dict: Контекст данных страницы блога с дополнительной информацией о доступе к контенту.
-        """
-        context = super().get_context_data(**kwargs)
-        blog = self.get_object()
-        if self.request.user.is_authenticated or self.request.user == Blog.owner:
-            user_subscribed = User.objects.filter(
-                payments=self.request.user == Subscription.is_subscribed
-            ).exists()
-            if user_subscribed:
-                context["can_view_content"] = True
-            else:
-                context["can_view_content"] = not blog.is_premium
-        else:
-            context["can_view_content"] = not blog.is_premium
-        return context
 
 
 class BlogDeleteView(LoginRequiredMixin, DeleteView):
@@ -182,15 +153,5 @@ class BlogDeleteView(LoginRequiredMixin, DeleteView):
             return Blog.objects.all()
 
 
-@login_required
-def create_blog(request):
-    if request.method == 'POST':
-        form = BlogForm(request.POST)
-        if form.is_valid():
-            blog = form.save(commit=False)
-            blog.owner = request.user
-            blog.save()
-            return redirect('blog_detail', pk=blog.pk)
-    else:
-        form = BlogForm()
-    return render(request, 'blog_form.html', {'form': form})
+def subscription_required(request):
+    return render(request, 'blog/blog_not_available.html')

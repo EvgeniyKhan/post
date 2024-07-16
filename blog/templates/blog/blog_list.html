@@ -1,31 +1,28 @@
 {% extends 'blog/base.html' %}
 {% load tag %}
-{% block content %}
 
+{% block content %}
 <div class="album py-5 bg-light">
     <div class="container">
         <div class="row">
             {% for object in object_list %}
             <div class="col-md-4">
                 <div class="card mb-4 box-shadow">
-                    <img class="good_logo" src="{{ object.preview|mymedia }}" alt="Фото" style="width:100%;">
+                    <img class="card-img-top" src="{{ object.preview|mymedia }}" alt="{{ object.title }}">
                     <div class="card-body">
-                        <p class="card-text">{{ object.title }}</p>
-                        <p class="card-text">владелец: {{ object.owner }}</p>
+                        <h5 class="card-title">{{ object.title }}</h5>
+                        <p class="card-text">Владелец: {{ object.owner }}</p>
+                        <p class="card-text">Подписка: {{ object.is_premium }}</p>
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="btn-group">
-                                {% if not object.is_premium or subscription.payments or user == object.owner and user.is_authenticated or user.is_superuser %}
-                                <a href="{% url 'blog:blog_detail' object.pk %}"
-                                   class="btn btn-sm btn-outline-secondary">View</a>
+                                {% if not object.is_premium or user.payments or user == object.owner and user.is_authenticated or user.is_superuser %}
+                                <a href="{% url 'blog:blog_detail' object.pk %}" class="btn btn-sm btn-outline-primary">Подробнее</a>
                                 {% else %}
-                                <a href="{% url 'users:perform_create' %}">оформите
-                                    подписку</a>
+                                <a href="{% url 'blog:subscription_required' %}" class="btn btn-sm btn-outline-danger">Платный контент</a>
                                 {% endif %}
                                 {% if user == object.owner or user.is_superuser %}
-                                <a href="{% url 'blog:blog_update' object.pk %}"
-                                   class="btn btn-sm btn-outline-secondary">Edit</a>
-                                <a href="{% url 'blog:blog_delete' object.pk %}"
-                                   class="btn btn-sm btn-outline-secondary">Delete</a>
+                                <a href="{% url 'blog:blog_update' object.pk %}" class="btn btn-sm btn-outline-secondary">Редактировать</a>
+                                <a href="{% url 'blog:blog_delete' object.pk %}" class="btn btn-sm btn-outline-danger">Удалить</a>
                                 {% endif %}
                             </div>
                             <small class="text-muted">Опубликовано {% now "H:i" %}</small>
@@ -37,5 +34,4 @@
         </div>
     </div>
 </div>
-
 {% endblock %}

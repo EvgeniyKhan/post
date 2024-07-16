@@ -1,5 +1,6 @@
 from django.urls import path
 
+from blog import views
 from blog.apps import BlogConfig
 from blog.views import (BlogCreateView, BlogDeleteView, BlogDetailView,
                         BlogListView, BlogUpdateView)
@@ -12,6 +13,7 @@ urlpatterns = [
     path("update/<int:pk>/", BlogUpdateView.as_view(), name="blog_update"),
     path("delete/<int:pk>/", BlogDeleteView.as_view(), name="blog_delete"),
     path("create/", BlogCreateView.as_view(), name="blog_create"),
+    path('subscription-required/', views.subscription_required, name='subscription_required')
 ]
 
 """

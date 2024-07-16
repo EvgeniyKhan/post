@@ -1,6 +1,7 @@
 import stripe
 
-from config.settings import STRIPE_API_KEY
+from config.settings import STRIPE_API_KEY, STRIPE_SUCCESS_URL
+
 
 stripe.api_key = STRIPE_API_KEY
 
@@ -47,7 +48,7 @@ def create_stripe_session(price):
         tuple: Идентификатор и URL созданной сессии оплаты в Stripe.
     """
     session = stripe.checkout.Session.create(
-        success_url="http://127.0.0.1:8080/",
+        success_url=STRIPE_SUCCESS_URL,
         line_items=[{"price": price.get("id"), "quantity": 1}],
         mode="payment",
     )
@@ -56,8 +57,8 @@ def create_stripe_session(price):
 
 def check_payment_status(payment_intent_id):
     try:
-        payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
-        return payment_intent.status == 'succeeded'
+        payment_intent = stripe.checkout.Session.retrieve(payment_intent_id)
+        return payment_intent["payment_status"] == 'paid'
     except stripe.error.StripeError as e:
         # Обработка ошибок Stripe
         return False
